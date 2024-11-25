@@ -50,23 +50,51 @@ impl DAG {
             false 
         }
     }
-}
 
-fn main() {
-    let mut dag = DAG::new();
+    // remove a transaction from the DAG
+    fn remove_invalid_transaction(&mut self, id: &String) {
+        if !self.validate_transaction(id) {
+            println!("Transaction invalide détectée : {}", id);
 
-    dag.add_transaction("T1".to_string(), "Transaction 1".to_string(), vec![]);
-    dag.add_transaction(
-        "T2".to_string(),
-        "Transaction 2".to_string(),
-        vec!["T1".to_string()],
-    );
-    dag.add_transaction(
-        "T3".to_string(),
-        "Transaction 3".to_string(),
-        vec!["T1".to_string(), "T2".to_string()],
-    );
+            self.transactions.remove(id);
 
-    println!("T3 est valide ? {}", dag.validate_transaction(&"T3".to_string())); // true
-    println!("T4 est valide ? {}", dag.validate_transaction(&"T4".to_string())); // false
-}
+            let invalid_children: Vec<String> = self.transactions
+                .iter()
+                .filter(|(_, transaction)| transaction.approves.contains(id))
+                .map(|(key, _)| key.clone())
+                .collect();
+
+            for child_id in invalid_children {
+                self.remove_invalid_transaction(&child_id); 
+            }
+        }
+    }}
+
+    fn main() {
+        let mut dag = DAG::new();
+    
+        dag.add_transaction("T1".to_string(), "Transaction 1".to_string(), vec![]);
+        dag.add_transaction(
+            "T2".to_string(),
+            "Transaction 2".to_string(),
+            vec!["T1".to_string()],
+        );
+        dag.add_transaction(
+            "T3".to_string(),
+            "Transaction 3".to_string(),
+            vec!["T1".to_string(), "T2".to_string()],
+        );
+        dag.add_transaction(
+            "T4".to_string(),
+            "Transaction 4".to_string(),
+            vec!["T3".to_string(), "T5".to_string()], // T5 n'existe pas
+        );
+    
+        println!("Transactions avant suppression :");
+        dag.display();
+    
+        dag.remove_invalid_transaction(&"T4".to_string());
+    
+        println!("\nTransactions après suppression :");
+        dag.display();
+    }
