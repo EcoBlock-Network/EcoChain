@@ -19,7 +19,13 @@ impl DAG {
         }
     }
 
-    
+    fn add_transaction(&mut self, id: String, data: String) {
+        let transaction = Transaction {
+            id: id.clone(),
+            data: data,
+        };
+        self.transations.insert(id, transaction);
+    }
 }
 
 fn main() {
