@@ -1,4 +1,9 @@
-use std::{collections::HashMap, hash::Hash, vec};
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
+use lazy_static::lazy_static;
+
+
 
 #[derive(Debug)]
 struct Transaction {
@@ -21,7 +26,8 @@ impl DAG {
     }
 
     //add a transaction to the DAG
-    fn add_transaction(&mut self, id: String, data: String, approves: Vec<String>) {
+    fn add_transaction(&mut self, data: String, approves: Vec<String>) {
+        let id = generate_unique_id();
         let transaction = Transaction {
             id: id.clone(),
             data: data,
@@ -68,33 +74,33 @@ impl DAG {
                 self.remove_invalid_transaction(&child_id); 
             }
         }
-    }}
-
-    fn main() {
-        let mut dag = DAG::new();
-    
-        dag.add_transaction("T1".to_string(), "Transaction 1".to_string(), vec![]);
-        dag.add_transaction(
-            "T2".to_string(),
-            "Transaction 2".to_string(),
-            vec!["T1".to_string()],
-        );
-        dag.add_transaction(
-            "T3".to_string(),
-            "Transaction 3".to_string(),
-            vec!["T1".to_string(), "T2".to_string()],
-        );
-        dag.add_transaction(
-            "T4".to_string(),
-            "Transaction 4".to_string(),
-            vec!["T3".to_string(), "T5".to_string()], // T5 n'existe pas
-        );
-    
-        println!("Transactions avant suppression :");
-        dag.display();
-    
-        dag.remove_invalid_transaction(&"T4".to_string());
-    
-        println!("\nTransactions après suppression :");
-        dag.display();
     }
+}
+
+lazy_static! {
+    static ref COUNTER: Mutex<u64> = Mutex::new(0);
+}
+
+fn generate_unique_id() -> String {
+    let now = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .expect("Time went backwards")
+    .as_nanos();
+
+    let mut counter = COUNTER.lock().unwrap();
+    *counter += 1;
+    format!("{}{}", now, counter)
+}
+
+fn main() {
+    let mut dag = DAG::new();
+
+    // Ajouter des transactions
+    dag.add_transaction("Transaction 1".to_string(), vec![]);
+    dag.add_transaction("Transaction 2".to_string(), vec![]);
+    dag.add_transaction("Transaction 3".to_string(), vec!["12345".to_string()]);
+
+    // Afficher les transactions
+    println!("Transactions dans le DAG :");
+    dag.display();
+}
