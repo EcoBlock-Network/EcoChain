@@ -19,6 +19,7 @@ impl DAG {
         }
     }
 
+    //add a transaction to the DAG
     fn add_transaction(&mut self, id: String, data: String) {
         let transaction = Transaction {
             id: id.clone(),
@@ -26,13 +27,19 @@ impl DAG {
         };
         self.transations.insert(id, transaction);
     }
+
+    //get a transaction from the DAG
+    fn display(&self) {
+        for (id, transaction) in &self.transations {
+            println!("Transaction id: {}, data: {}", id, transaction.data);
+        }
+    }
 }
 
 fn main() {
-    let tx = Transaction {
-        id: "T1".to_string(),
-        data: "Donnée de test".to_string(),
-    };
-
-    println!("Transaction créée {:?}", tx);
+    let mut dag = DAG::new();
+    dag.add_transaction("1".to_string(), "Transaction 1".to_string());
+    dag.add_transaction("2".to_string(), "Transaction 2".to_string());
+    dag.add_transaction("3".to_string(), "Transaction 3".to_string());
+    dag.display();
 }
