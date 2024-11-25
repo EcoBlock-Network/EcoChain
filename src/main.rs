@@ -2,7 +2,7 @@ mod dag;
 mod utils;
 
 use dag::DAG;
-use libp2p::identity;
+use libp2p::{identity, PeerId, Swarm, Multiaddr};
 
 fn main(){
     //generate keypair
@@ -12,6 +12,14 @@ fn main(){
     let local_peer_id = libp2p::PeerId::from(local_keys.public());
 
     println!("Local peer id: {:?}", local_peer_id);
+
+    //config swarm
+
+    let swarm = liubp2p::Swarm::new(
+        libp2p::development_transport(local_keys).unwrap(),
+        (),
+        local_peer_id.clone(),
+    );
 }
 
 
