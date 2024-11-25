@@ -3,47 +3,50 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use lazy_static::lazy_static;
 
-
-
 #[derive(Debug)]
 struct Transaction {
     id: String,
     data: String,
     approves: Vec<String>,
+    cumulative_weight: u64, 
 }
 
 #[derive(Debug)]
 struct DAG {
-    transactions : HashMap<String, Transaction>,
+    transactions: HashMap<String, Transaction>,
 }
 
 impl DAG {
-    //create new empty DAG
     fn new() -> DAG {
         DAG {
             transactions: HashMap::new(),
         }
     }
 
-    //add a transaction to the DAG
-    fn add_transaction(&mut self, data: String, approves: Vec<String>) {
+    fn add_transaction(&mut self, data: String, approves: Vec<String>) -> String {
         let id = generate_unique_id();
         let transaction = Transaction {
             id: id.clone(),
-            data: data,
+            data,
             approves,
+            cumulative_weight: 1,
         };
-        self.transactions.insert(id, transaction);
+        self.transactions.insert(id.clone(), transaction);
+        id
     }
 
-    //get a transaction from the DAG
     fn display(&self) {
         for (id, transaction) in &self.transactions {
-            println!("Transaction id: {}, data: {}, approves {}", id, transaction.data, transaction.approves.join(", "));
+            println!(
+                "Transaction id: {}, data: {}, approves: {}, cumulative_weight: {}",
+                id,
+                transaction.data,
+                transaction.approves.join(", "),
+                transaction.cumulative_weight
+            );
         }
     }
 
-    //validate the DAG
     fn validate_transaction(&self, id: &String) -> bool {
         if let Some(transaction) = self.transactions.get(id) {
             for approved_id in &transaction.approves {
@@ -51,13 +54,12 @@ impl DAG {
                     return false;
                 }
             }
-            true 
+            true
         } else {
-            false 
+            false
         }
     }
 
-    // remove a transaction from the DAG
     fn remove_invalid_transaction(&mut self, id: &String) {
         if !self.validate_transaction(id) {
             println!("Transaction invalide détectée : {}", id);
@@ -71,10 +73,31 @@ impl DAG {
                 .collect();
 
             for child_id in invalid_children {
-                self.remove_invalid_transaction(&child_id); 
+                self.remove_invalid_transaction(&child_id);
             }
         }
     }
+
+    fn calculate_cumulative_weight(&mut self, id: &String) -> u64 {
+        let approved_ids = if let Some(transaction) = self.transactions.get(id) {
+            transaction.approves.clone()
+        } else {
+            return 0; 
+        };
+    
+        let mut weight = 1;
+    
+        for approved_id in approved_ids {
+            weight += self.calculate_cumulative_weight(&approved_id);
+        }
+    
+        if let Some(transaction) = self.transactions.get_mut(id) {
+            transaction.cumulative_weight = weight;
+        }
+    
+        weight
+    }
+    
 }
 
 lazy_static! {
@@ -83,9 +106,9 @@ lazy_static! {
 
 fn generate_unique_id() -> String {
     let now = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .expect("Time went backwards")
-    .as_nanos();
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_nanos();
 
     let mut counter = COUNTER.lock().unwrap();
     *counter += 1;
@@ -95,12 +118,14 @@ fn generate_unique_id() -> String {
 fn main() {
     let mut dag = DAG::new();
 
-    // Ajouter des transactions
-    dag.add_transaction("Transaction 1".to_string(), vec![]);
-    dag.add_transaction("Transaction 2".to_string(), vec![]);
-    dag.add_transaction("Transaction 3".to_string(), vec!["12345".to_string()]);
+    let id1 = dag.add_transaction("Transaction 1".to_string(), vec![]);
+    let id2 = dag.add_transaction("Transaction 2".to_string(), vec![id1.clone()]);
+    let id3 = dag.add_transaction("Transaction 3".to_string(), vec![id1.clone(), id2.clone()]);
 
-    // Afficher les transactions
+    for id in dag.transactions.keys().cloned().collect::<Vec<_>>() {
+        dag.calculate_cumulative_weight(&id);
+    }
+
     println!("Transactions dans le DAG :");
     dag.display();
 }
