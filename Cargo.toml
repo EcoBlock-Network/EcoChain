@@ -5,8 +5,9 @@ edition = "2021"
 
 [dependencies]
 lazy_static = "1.4.0"
-libp2p = { version = "0.54", features = ["noise", "ping", "tcp", "tokio", "yamux"] }
-futures = "0.3.30"
 tokio = { version = "1.37.0", features = ["full"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = { version = "1.0", features = ["derive"] }
+libp2p = { version = "0.52", features = ["tcp", "tls", "dns", "async-std", "noise", "yamux", "websocket", "ping", "macros"] }
+futures = "0.3.21"
+async-std = { version = "1.12.0", features = ["attributes"] }
