@@ -1,25 +1,24 @@
-mod dag;
-mod utils;
+use std::error::Error;
+use libp2p::tcp::Config as TcpConfig; 
+use tracing_subscriber::EnvFilter;
 
-use dag::DAG;
-use libp2p::{identity, PeerId, Swarm, Multiaddr};
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .try_init();
 
-fn main(){
-    //generate keypair
-    let local_keys = identity::Keypair::generate_ed25519();
+    // generate local peer id
+    let local_key = libp2p::identity::Keypair::generate_ed25519();
+    let local_peer_id = libp2p::PeerId::from(local_key.public());
 
-    //create peer id
-    let local_peer_id = libp2p::PeerId::from(local_keys.public());
+    println!("Local Peer ID: {}", local_peer_id);
 
-    println!("Local peer id: {:?}", local_peer_id);
+    // config tcp transport
+    let transport = TcpConfig::new();
+    println!("TCP transport configured successfully!");
 
-    //config swarm
-
-    let swarm = liubp2p::Swarm::new(
-        libp2p::development_transport(local_keys).unwrap(),
-        (),
-        local_peer_id.clone(),
-    );
+    Ok(())
 }
 
 
