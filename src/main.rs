@@ -5,9 +5,9 @@ use libp2p::{
     ping,
     identify,
     mdns,
-    rendezvous::{self, client, server, Namespace},
+    rendezvous::{client, server, Namespace},
     tcp::Config as TcpConfig,
-    Multiaddr,
+
     swarm::{NetworkBehaviour, SwarmEvent},
 };
 use tracing_subscriber::EnvFilter;

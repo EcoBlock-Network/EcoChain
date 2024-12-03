@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  node1:
+    build: .
+    container_name: ecochain-node1
+    networks:
+      ecochain-network:
+        ipv4_address: 192.168.1.101
+
+  node2:
+    build: .
+    container_name: ecochain-node2
+    networks:
+      ecochain-network:
+        ipv4_address: 192.168.1.102
+
+networks:
+  ecochain-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
