@@ -7,7 +7,6 @@ use libp2p::{
     mdns,
     rendezvous::{client, server, Namespace},
     tcp::Config as TcpConfig,
-
     swarm::{NetworkBehaviour, SwarmEvent},
 };
 use tracing_subscriber::EnvFilter;
@@ -26,6 +25,7 @@ struct MyBehaviour {
 enum MyBehaviourEvent {
     Identify(identify::Event),
     RendezvousClient(client::Event),
+    #[allow(dead_code)]
     RendezvousServer(server::Event),
     Ping(ping::Event),
     Mdns(mdns::Event),
@@ -63,15 +63,21 @@ impl From<mdns::Event> for MyBehaviourEvent {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+
+    // INITIALIZE TRACING
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .try_init()
         .unwrap();
 
+
+    // GENERATE LOCAL KEYPAIR AND PEER ID
     let local_key = libp2p::identity::Keypair::generate_ed25519();
     let local_peer_id = libp2p::PeerId::from(local_key.public());
     println!("Local Peer ID: {}", local_peer_id);
 
+
+    // BUILD THE SWARM
     let mut swarm = libp2p::SwarmBuilder::with_new_identity()
         .with_async_std()
         .with_tcp(
@@ -91,15 +97,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
         })?
         .build();
 
+
+    // LISTEN ON ALL INTERFACES
     swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
     println!("Swarm listening on /ip4/0.0.0.0/tcp/0");
 
+
+    // REGISTER IN RENDEZVOUS SERVER
     let namespace = Namespace::new("example-namespace".to_string()).expect("Invalid namespace");
     let _ = swarm.behaviour_mut().rendezvous_client.register(namespace.clone(), local_peer_id, Some(3600));
     println!("Registered in namespace: {}", namespace);
-
     let mut connected_peers: Vec<libp2p::PeerId> = Vec::new();
 
+
+    // SWARM EVENT LOOP
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::NewListenAddr { address, .. } => {
@@ -139,11 +150,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                 }
             }
+            
             SwarmEvent::Behaviour(MyBehaviourEvent::Ping(event)) => {
                 println!("Ping event: {event:?}");
             }
             SwarmEvent::Behaviour(MyBehaviourEvent::Identify(event)) => {
                 println!("Identify event: {event:?}");
+            }
+            SwarmEvent::IncomingConnection { connection_id, local_addr, send_back_addr } => {
+                println!("Incoming connection: {connection_id:?} from {send_back_addr} to {local_addr}");
+            }
+            SwarmEvent::OutgoingConnectionError { connection_id, peer_id, error } => {
+                println!("Outgoing connection error: {connection_id:?}, peer_id: {peer_id:?}, error: {error:?}");
+            }
+            SwarmEvent::IncomingConnectionError { connection_id, local_addr, send_back_addr, error } => {
+                println!("Incoming connection error: {connection_id:?}, from {send_back_addr} to {local_addr}, error: {error:?}");
             }
             other => {
                 println!("Unhandled event: {other:?}");
