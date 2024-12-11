@@ -95,7 +95,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Swarm listening on /ip4/0.0.0.0/tcp/0");
 
     let namespace = Namespace::new("example-namespace".to_string()).expect("Invalid namespace");
-    swarm.behaviour_mut().rendezvous_client.register(namespace.clone(), local_peer_id, Some(3600));
+    let _ = swarm.behaviour_mut().rendezvous_client.register(namespace.clone(), local_peer_id, Some(3600));
     println!("Registered in namespace: {}", namespace);
 
     let mut connected_peers: Vec<libp2p::PeerId> = Vec::new();
