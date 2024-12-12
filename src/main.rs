@@ -196,12 +196,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     libp2p::swarm::DialError::Transport(_) => {
                         println!("Transport error occurred, check the underlying transport setup.");
                     }
-                    libp2p::swarm::DialError::ConnectionLimit(_) => {
-                        println!("Connection limit exceeded. Consider increasing limits.");
-                    }
-                    libp2p::swarm::DialError::InvalidPeerId { .. } => {
-                        println!("Invalid PeerId encountered during connection attempt.");
-                    }
                     _ => {
                         println!("Unhandled dial error: {:#?}", error);
                     }
