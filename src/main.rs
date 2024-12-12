@@ -90,34 +90,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_env_filter(EnvFilter::from_default_env())
         .try_init()
         .unwrap();
-
-
+    
         fn generate_or_load_keypair() -> Keypair {
             let key_path = "peer_keypair";
         
-            // Tenter de charger les clés depuis un fichier
             if let Ok(bytes) = fs::read(key_path) {
                 match Keypair::from_protobuf_encoding(&bytes) {
                     Ok(keypair) => {
-                        println!("Clé chargée avec succès depuis le fichier.");
+                        println!("Keys loaded from {key_path}");
                         keypair
                     }
                     Err(_) => {
-                        panic!("Échec du décodage des clés. Le fichier peut être corrompu.");
+                        panic!("Error loading keys from {key_path}");
                     }
                 }
             } else {
-                // Générer une nouvelle paire de clés si aucune n'est trouvée
                 let keypair = Keypair::generate_ed25519();
                 let encoded_key = keypair
                     .to_protobuf_encoding()
-                    .expect("Erreur lors de l'encodage des clés");
+                    .expect("Error encoding keys to protobuf.");
         
-                // Sauvegarder les clés sur le disque
-                let mut file = fs::File::create(key_path).expect("Échec de l'ouverture du fichier pour écrire.");
+                let mut file = fs::File::create(key_path).expect("Error creating keys file.");
                 file.write_all(&encoded_key)
-                    .expect("Échec de l'enregistrement de la paire de clés.");
-                println!("Nouvelle clé générée et sauvegardée dans {key_path}.");
+                    .expect("Error writing keys to file.");
+                println!("New keys generated and saved to {key_path}");
                 keypair
             }
         }
@@ -172,14 +168,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // SWARM EVENT LOOP
     loop {
+        println!("Waiting for SwarmEvent...");
+    
         match swarm.select_next_some().await {
             SwarmEvent::NewListenAddr { address, .. } => {
                 println!("Listening on: {address}");
             }
-            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+            // SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+            //     println!("Connected to peer: {peer_id}");
+            //     if !connected_peers.contains(&peer_id) {
+            //         connected_peers.push(peer_id);
+            //     }
+            // }
+             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 println!("Connected to peer: {peer_id}");
-                if !connected_peers.contains(&peer_id) {
-                    connected_peers.push(peer_id);
+    
+                if is_client {
+                    let message = b"Hello from client!";
+                    println!("Client sending message to {peer_id}: {:?}", std::str::from_utf8(message).unwrap());
+                }
+    
+                if is_server {
+                    let response = b"Hello from server!";
+                    println!("Server responding to {peer_id}: {:?}", std::str::from_utf8(response).unwrap());
                 }
             }
             SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
@@ -224,15 +235,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     "Outgoing connection error: {:?}, peer_id: {:?}, error: {:#?}",
                     connection_id, peer_id, error
                 );
-            
-                match error {
-                    libp2p::swarm::DialError::Transport(_) => {
-                        println!("Transport error occurred, check the underlying transport setup.");
-                    }
-                    _ => {
-                        println!("Unhandled dial error: {:#?}", error);
-                    }
-                }
             }
             SwarmEvent::ConnectionClosed {
                 peer_id,
@@ -250,8 +252,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 } else {
                     println!("Connection closed cleanly without an error.");
                 }
-            },
-            
+            }
             SwarmEvent::IncomingConnectionError { connection_id, local_addr, send_back_addr, error } => {
                 println!("Incoming connection error: {connection_id:?}, from {send_back_addr} to {local_addr}, error: {error:?}");
             }
