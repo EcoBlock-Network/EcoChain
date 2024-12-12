@@ -10,6 +10,10 @@ use libp2p::{
     swarm::{NetworkBehaviour, SwarmEvent},
 };
 use tracing_subscriber::EnvFilter;
+use std::fs;
+use libp2p::identity::{Keypair};
+
+
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "MyBehaviourEvent")]
@@ -60,6 +64,7 @@ impl From<mdns::Event> for MyBehaviourEvent {
         MyBehaviourEvent::Mdns(event)
     }
 }
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
