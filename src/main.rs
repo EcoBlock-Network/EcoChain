@@ -14,8 +14,6 @@ use libp2p_identity::Keypair;
 use std::fs;
 use std::io::Write;
 
-
-
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "MyBehaviourEvent")]
 struct MyBehaviour {
@@ -66,7 +64,6 @@ impl From<mdns::Event> for MyBehaviourEvent {
     }
 }
 
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
@@ -74,13 +71,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let is_client = args.iter().any(|arg| arg == "--client");
 
     println!(
-        "Mode d'exécution : {}",
+        "Mode: {}",
         if is_server {
-            "Serveur"
+            "serv"
         } else if is_client {
-            "Client"
+            "client"
         } else {
-            "Client et Serveur (par défaut)"
+            "client/serv"
         }
     );
 
@@ -90,33 +87,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .try_init()
         .unwrap();
     
-        fn generate_or_load_keypair() -> Keypair {
-            let key_path = "peer_keypair";
-        
-            if let Ok(bytes) = fs::read(key_path) {
-                match Keypair::from_protobuf_encoding(&bytes) {
-                    Ok(keypair) => {
-                        println!("Keys loaded from {key_path}");
-                        keypair
-                    }
-                    Err(_) => {
-                        panic!("Error loading keys from {key_path}");
-                    }
+    fn generate_or_load_keypair() -> Keypair {
+        let key_path = "peer_keypair";
+    
+        if let Ok(bytes) = fs::read(key_path) {
+            match Keypair::from_protobuf_encoding(&bytes) {
+                Ok(keypair) => {
+                    println!("Keys loaded from {key_path}");
+                    keypair
                 }
-            } else {
-                let keypair = Keypair::generate_ed25519();
-                let encoded_key = keypair
-                    .to_protobuf_encoding()
-                    .expect("Error encoding keys to protobuf.");
-        
-                let mut file = fs::File::create(key_path).expect("Error creating keys file.");
-                file.write_all(&encoded_key)
-                    .expect("Error writing keys to file.");
-                println!("New keys generated and saved to {key_path}");
-                keypair
+                Err(_) => {
+                    panic!("Error loading keys from {key_path}");
+                }
             }
+        } else {
+            let keypair = Keypair::generate_ed25519();
+            let encoded_key = keypair
+                .to_protobuf_encoding()
+                .expect("Error encoding keys to protobuf.");
+    
+            let mut file = fs::File::create(key_path).expect("Error creating keys file.");
+            file.write_all(&encoded_key)
+                .expect("Error writing keys to file.");
+            println!("New keys saved to {key_path}");
+            keypair
         }
-        
+    }
+    
     // GENERATE PEER ID
     let local_key = generate_or_load_keypair();
     let local_peer_id = libp2p::PeerId::from(local_key.public());
@@ -150,13 +147,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         })?
         .build();
 
-    // LISTEN ON ALL INTERFACES (Serveur uniquement)
+    // LISTEN ON ALL INTERFACES
     if is_server || (!is_client && !is_server) {
         swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
-        println!("Swarm listening on /ip4/0.0.0.0/tcp/0");
+        println!("Listening on /ip4/0.0.0.0/tcp/0");
     }
 
-    // REGISTER IN RENDEZVOUS SERVER (Client uniquement)
+    // REGISTER IN RENDEZVOUS SERVER 
     if is_client || (!is_client && !is_server) {
         let namespace = Namespace::new("ecoCore".to_string()).expect("Invalid namespace");
         let _ = swarm.behaviour_mut().rendezvous_client.register(namespace.clone(), local_peer_id, Some(3600));
@@ -167,20 +164,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // SWARM EVENT LOOP
     loop {
-        println!("Waiting for SwarmEvent...");
+        println!("Waiting for event...");
     
         match swarm.select_next_some().await {
             SwarmEvent::NewListenAddr { address, .. } => {
                 println!("Listening on: {address}");
             }
-            // SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-            //     println!("Connected to peer: {peer_id}");
-            //     if !connected_peers.contains(&peer_id) {
-            //         connected_peers.push(peer_id);
-            //     }
-            // }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                println!("Connected to peer: {peer_id}");
+                println!("Connected to: {peer_id}");
                 if !connected_peers.contains(&peer_id) {
                     connected_peers.push(peer_id);
                 }
@@ -188,24 +179,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 // Interagir après la connexion
                 if is_client {
                     let message = "Hello from client!";
-                    println!("Client sending message to {peer_id}: {message}");
-                    // Simulez un envoi de message ici (remplacez par une vraie logique si nécessaire)
+                    println!("Client to {peer_id}: {message}");
                 }
             
                 if is_server {
                     let response = "Hello from server!";
-                    println!("Server responding to {peer_id}: {response}");
-                    // Simulez une réponse ici (remplacez par une vraie logique si nécessaire)
+                    println!("Server to {peer_id}: {response}");
                 }
             }
             SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
                 for (peer_id, addr) in peers {
                     if peer_id != local_peer_id && !connected_peers.contains(&peer_id) {
-                        println!("Discovered peer via mDNS: {} at {:?}", peer_id, addr);
+                        println!("Discovered: {} at {:?}", peer_id, addr);
                         if let Err(err) = swarm.dial(addr.clone()) {
-                            println!("Failed to dial discovered peer {}: {:?}", peer_id, err);
+                            println!("Failed to dial {}: {:?}", peer_id, err);
                         } else {
-                            println!("Dialing discovered peer at: {:?}", addr);
+                            println!("Dialing: {:?}", addr);
                         }
                     }
                 }
@@ -213,34 +202,41 @@ async fn main() -> Result<(), Box<dyn Error>> {
             SwarmEvent::Behaviour(MyBehaviourEvent::RendezvousClient(client::Event::Discovered { registrations, .. })) => {
                 for reg in registrations {
                     println!(
-                        "Discovered peer: {} in namespace: {}",
+                        "Discovered: {} in namespace: {}",
                         reg.record.peer_id(),
                         reg.namespace
                     );
                     if let Some(addr) = reg.record.addresses().first() {
                         if let Err(err) = swarm.dial(addr.clone()) {
-                            println!("Failed to dial discovered peer {}: {:?}", reg.record.peer_id(), err);
+                            println!("Failed to dial {}: {:?}", reg.record.peer_id(), err);
                         } else {
-                            println!("Dialing discovered peer at: {:?}", addr);
+                            println!("Dialing: {:?}", addr);
                         }
                     }
                 }
             }
             SwarmEvent::Behaviour(MyBehaviourEvent::Ping(event)) => {
-                println!("Ping event: {event:?}");
+                println!("Ping: {event:?}");
             }
             SwarmEvent::Behaviour(MyBehaviourEvent::Identify(event)) => {
-                println!("Identify event: {event:?}");
+                match event {
+                    identify::Event::Received { peer_id, info, connection_id: _ } => {
+                        println!(
+                            "Identify from {}: {:?}",
+                            peer_id, info
+                        );
+                    }
+                    identify::Event::Sent {peer_id, connection_id: _ } => {
+                        println!("Identify to: {}", peer_id);
+                    }
+                    _ => {}
+                }
             }
+            
             SwarmEvent::IncomingConnection { connection_id, local_addr, send_back_addr } => {
-                println!("Incoming connection: {connection_id:?} from {send_back_addr} to {local_addr}");
+                println!("Incoming: {connection_id:?} from {send_back_addr} to {local_addr}");
             }
-            SwarmEvent::OutgoingConnectionError { connection_id, peer_id, error } => {
-                println!(
-                    "Outgoing connection error: {:?}, peer_id: {:?}, error: {:#?}",
-                    connection_id, peer_id, error
-                );
-            }
+           
             SwarmEvent::ConnectionClosed {
                 peer_id,
                 connection_id,
@@ -249,20 +245,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 ..
             } => {
                 println!(
-                    "Connection closed with peer: {:?} on endpoint: {:?}, connection ID: {:?}",
+                    "Closed: {:?} on {:?}, ID: {:?}",
                     peer_id, endpoint, connection_id
                 );
                 if let Some(error) = cause {
-                    println!("Cause of closure: {:#?}", error);
+                    println!("Cause: {:#?}", error);
                 } else {
-                    println!("Connection closed cleanly without an error.");
+                    println!("Closed cleanly.");
                 }
             }
             SwarmEvent::IncomingConnectionError { connection_id, local_addr, send_back_addr, error } => {
-                println!("Incoming connection error: {connection_id:?}, from {send_back_addr} to {local_addr}, error: {error:?}");
+                println!(" error: {connection_id:?}, from {send_back_addr} to {local_addr}, error: {error:?}");
             }
             other => {
-                println!("Unhandled event: {other:?}");
+                println!("Unhandled: {other:?}");
             }
         }
     }
