@@ -1,7 +1,6 @@
 use std::{env, error::Error};
 use std::time::Duration;
 use futures::StreamExt;
-use libp2p::tcp;
 use libp2p::{
     ping,
     identify,
@@ -11,9 +10,9 @@ use libp2p::{
     swarm::{NetworkBehaviour, SwarmEvent},
 };
 use tracing_subscriber::EnvFilter;
-use libp2p_identity::{Keypair};
+use libp2p_identity::Keypair;
 use std::fs;
-use std::io::{self, Write};
+use std::io::Write;
 
 
 
@@ -159,12 +158,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // REGISTER IN RENDEZVOUS SERVER (Client uniquement)
     if is_client || (!is_client && !is_server) {
-        let namespace = Namespace::new("example-namespace".to_string()).expect("Invalid namespace");
+        let namespace = Namespace::new("ecoCore".to_string()).expect("Invalid namespace");
         let _ = swarm.behaviour_mut().rendezvous_client.register(namespace.clone(), local_peer_id, Some(3600));
         println!("Registered in namespace: {}", namespace);
     }
 
-    let mut connected_peers: Vec<libp2p::PeerId> = Vec::new();
+    let connected_peers: Vec<libp2p::PeerId> = Vec::new();
 
     // SWARM EVENT LOOP
     loop {
