@@ -132,7 +132,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )?
         .with_behaviour(|_| MyBehaviour {
             identify: identify::Behaviour::new(identify::Config::new(
-                "discovery-example/1.0.0".to_string(),
+                "ecoCore-discovery/1.0.0".to_string(),
                 local_key.public(),
             )),
             rendezvous_client: if is_client || (!is_client && !is_server) {
