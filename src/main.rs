@@ -187,8 +187,44 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 println!("Incoming connection: {connection_id:?} from {send_back_addr} to {local_addr}");
             }
             SwarmEvent::OutgoingConnectionError { connection_id, peer_id, error } => {
-                println!("Outgoing connection error: {connection_id:?}, peer_id: {peer_id:?}, error: {error:?}");
+                println!(
+                    "Outgoing connection error: {:?}, peer_id: {:?}, error: {:#?}",
+                    connection_id, peer_id, error
+                );
+            
+                match error {
+                    libp2p::swarm::DialError::Transport(_) => {
+                        println!("Transport error occurred, check the underlying transport setup.");
+                    }
+                    libp2p::swarm::DialError::ConnectionLimit(_) => {
+                        println!("Connection limit exceeded. Consider increasing limits.");
+                    }
+                    libp2p::swarm::DialError::InvalidPeerId { .. } => {
+                        println!("Invalid PeerId encountered during connection attempt.");
+                    }
+                    _ => {
+                        println!("Unhandled dial error: {:#?}", error);
+                    }
+                }
             }
+            SwarmEvent::ConnectionClosed {
+                peer_id,
+                connection_id,
+                cause,
+                endpoint,
+                ..
+            } => {
+                println!(
+                    "Connection closed with peer: {:?} on endpoint: {:?}, connection ID: {:?}",
+                    peer_id, endpoint, connection_id
+                );
+                if let Some(error) = cause {
+                    println!("Cause of closure: {:#?}", error);
+                } else {
+                    println!("Connection closed cleanly without an error.");
+                }
+            },
+            
             SwarmEvent::IncomingConnectionError { connection_id, local_addr, send_back_addr, error } => {
                 println!("Incoming connection error: {connection_id:?}, from {send_back_addr} to {local_addr}, error: {error:?}");
             }
