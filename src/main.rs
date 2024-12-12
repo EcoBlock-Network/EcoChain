@@ -163,7 +163,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("Registered in namespace: {}", namespace);
     }
 
-    let connected_peers: Vec<libp2p::PeerId> = Vec::new();
+    let mut connected_peers: Vec<libp2p::PeerId> = Vec::new();
 
     // SWARM EVENT LOOP
     loop {
@@ -179,17 +179,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
             //         connected_peers.push(peer_id);
             //     }
             // }
-             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 println!("Connected to peer: {peer_id}");
-    
-                if is_client {
-                    let message = b"Hello from client!";
-                    println!("Client sending message to {peer_id}: {:?}", std::str::from_utf8(message).unwrap());
+                if !connected_peers.contains(&peer_id) {
+                    connected_peers.push(peer_id);
                 }
-    
+            
+                // Interagir après la connexion
+                if is_client {
+                    let message = "Hello from client!";
+                    println!("Client sending message to {peer_id}: {message}");
+                    // Simulez un envoi de message ici (remplacez par une vraie logique si nécessaire)
+                }
+            
                 if is_server {
-                    let response = b"Hello from server!";
-                    println!("Server responding to {peer_id}: {:?}", std::str::from_utf8(response).unwrap());
+                    let response = "Hello from server!";
+                    println!("Server responding to {peer_id}: {response}");
+                    // Simulez une réponse ici (remplacez par une vraie logique si nécessaire)
                 }
             }
             SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
