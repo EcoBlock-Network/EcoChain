@@ -1,6 +1,7 @@
 use std::{env, error::Error};
 use std::time::Duration;
 use futures::StreamExt;
+use libp2p::tcp;
 use libp2p::{
     ping,
     identify,
@@ -10,8 +11,9 @@ use libp2p::{
     swarm::{NetworkBehaviour, SwarmEvent},
 };
 use tracing_subscriber::EnvFilter;
+use libp2p_identity::{Keypair};
 use std::fs;
-use libp2p::identity::{Keypair};
+use std::io::{self, Write};
 
 
 
@@ -89,8 +91,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .try_init()
         .unwrap();
 
+
+        fn generate_or_load_keypair() -> Keypair {
+            let key_path = "peer_keypair";
+        
+            // Tenter de charger les clés depuis un fichier
+            if let Ok(bytes) = fs::read(key_path) {
+                match Keypair::from_protobuf_encoding(&bytes) {
+                    Ok(keypair) => {
+                        println!("Clé chargée avec succès depuis le fichier.");
+                        keypair
+                    }
+                    Err(_) => {
+                        panic!("Échec du décodage des clés. Le fichier peut être corrompu.");
+                    }
+                }
+            } else {
+                // Générer une nouvelle paire de clés si aucune n'est trouvée
+                let keypair = Keypair::generate_ed25519();
+                let encoded_key = keypair
+                    .to_protobuf_encoding()
+                    .expect("Erreur lors de l'encodage des clés");
+        
+                // Sauvegarder les clés sur le disque
+                let mut file = fs::File::create(key_path).expect("Échec de l'ouverture du fichier pour écrire.");
+                file.write_all(&encoded_key)
+                    .expect("Échec de l'enregistrement de la paire de clés.");
+                println!("Nouvelle clé générée et sauvegardée dans {key_path}.");
+                keypair
+            }
+        }
+        
     // GENERATE PEER ID
-    let local_key = libp2p::identity::Keypair::generate_ed25519();
+    let local_key = generate_or_load_keypair();
     let local_peer_id = libp2p::PeerId::from(local_key.public());
     println!("Local Peer ID: {}", local_peer_id);
 
